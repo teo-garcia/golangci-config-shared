@@ -1,0 +1,4 @@
+bin/
+coverage/
+# Generated from the exported baseline; regenerate with `make lint-check`.
+.golangci.yml

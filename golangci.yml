@@ -1,0 +1,186 @@
+## Canonical golangci-lint configuration for teo-garcia Go templates.
+##
+## This file is the single source of truth for BOTH linting and formatting,
+## mirroring the way `ruff` owns lint + format for the Python templates.
+## Consumers do not copy it: they generate `.golangci.yml` from this baseline
+## with `golangci-config-path --out`, gitignore the generated file, and keep
+## only repo-specific rules in an overlay.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  # Keep vendored and generated trees out of the analysis set entirely.
+  modules-download-mode: readonly
+
+linters:
+  # `standard` is errcheck + govet + ineffassign + staticcheck + unused.
+  default: standard
+  enable:
+    - bodyclose # unclosed HTTP response bodies leak connections
+    - contextcheck # functions that should accept and propagate a context
+    - copyloopvar # redundant loop-variable copies (Go 1.22+ semantics)
+    - errorlint # %w wrapping and errors.As/Is correctness
+    - gocritic # opinionated correctness/style/performance diagnostics
+    - gosec # security scanner (injection, weak crypto, unsafe file perms)
+    - misspell # English spelling in comments and strings
+    - nilerr # `return nil` when err is non-nil
+    - noctx # HTTP requests sent without a context
+    - nolintlint # `//nolint` directives must be specific and explained
+    - prealloc # slice preallocation in hot loops
+    - revive # golint successor; naming, exported docs, early returns
+    - rowserrcheck # sql.Rows.Err() not checked
+    - sqlclosecheck # sql.Rows/Stmt not closed
+    - unconvert # redundant type conversions
+    - unparam # always-identical function parameters
+    - usestdlibvars # stdlib constants instead of magic strings
+    - wastedassign # assignments never read
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        # Deferred close on a read-only handle has no recoverable failure mode.
+        - (io.Closer).Close
+        - (*database/sql.Rows).Close
+
+    govet:
+      enable-all: true
+      disable:
+        # Struct field alignment is a micro-optimization that fights readability.
+        - fieldalignment
+        # `shadow` flags the idiomatic `if err := f(); err != nil` inside any
+        # function that already has an `err`. It is off in `go vet` by default
+        # for that reason, and enable-all would otherwise turn it back on.
+        - shadow
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        # Conflicts with the early-return style revive already enforces.
+        - ifElseChain
+        # Too noisy on domain structs that are intentionally passed by value.
+        - hugeParam
+
+    gosec:
+      excludes:
+        # G104 duplicates errcheck; keeping both doubles every finding.
+        - G104
+
+    revive:
+      severity: warning
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: early-return
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+          disabled: true # templates are not published libraries
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    staticcheck:
+      checks:
+        - all
+        # ST1000: package comments are not required (see revive above).
+        - -ST1000
+        # ST1003: initialisms are covered by revive's var-naming.
+        - -ST1003
+
+    misspell:
+      locale: US
+      ignore-rules:
+        # `CANCELLED` is the task status value shared by every backend template
+        # in the portfolio. It is on the wire and in the database, so US
+        # spelling here would be drift, not a correction.
+        - cancelled
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - vendor
+      - third_party
+      - .*\.gen\.go$
+      - .*_generated\.go$
+      - .*\.pb\.go$
+    rules:
+      # Test files trade some rigor for readability.
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - dupl
+          - errcheck
+          - gosec
+          - noctx
+          - unparam
+      # Migrations and seed data are literal by nature.
+      - path: (migrations|seed)/
+        linters:
+          - gosec
+          - lll
+
+formatters:
+  # Formatting is part of this package, not a separate tool. Run it with
+  # `golangci-lint fmt --config <path>`; check it with `--diff`.
+  enable:
+    - gofumpt # stricter superset of gofmt
+    - gci # deterministic import grouping
+  settings:
+    gofumpt:
+      extra-rules: true
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/teo-garcia)
+      custom-order: true
+  exclusions:
+    generated: lax
+    paths:
+      - vendor
+      - third_party
+
+issues:
+  # Report everything; templates should start from a clean slate.
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      colors: true
+  sort-order:
+    - file
+    - linter

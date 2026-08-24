@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Generate config
+        run: go run ./cmd/golangci-config-path --out .golangci.yml
+      - name: Verify config against the golangci-lint schema
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11.0
+          args: config verify --config .golangci.yml
+      - name: Lint + format check
+        run: |
+          make tools
+          ./bin/golangci-lint run --config .golangci.yml ./...
+          ./bin/golangci-lint fmt --diff --config .golangci.yml ./...
+      - name: Tests + coverage
+        run: make coverage
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
