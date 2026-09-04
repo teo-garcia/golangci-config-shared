@@ -1,9 +1,15 @@
-.PHONY: help tools lint lint-check format format-check test coverage check clean
+.PHONY: help tools config-check consumer-check lint lint-check format format-check test coverage security verify-release check clean
 
-GOLANGCI_LINT_VERSION ?= v2.11.0
+GOLANGCI_LINT_VERSION ?= v2.12.2
+GOVULNCHECK_VERSION ?= v1.7.0
 BIN_DIR := $(CURDIR)/bin
+CACHE_DIR := $(CURDIR)/.cache
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
+GOVULNCHECK := $(BIN_DIR)/govulncheck
 GENERATED_CONFIG := .golangci.yml
+
+export GOCACHE := $(CACHE_DIR)/go-build
+export GOLANGCI_LINT_CACHE := $(CACHE_DIR)/golangci-lint
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -11,11 +17,20 @@ help:
 $(GOLANGCI_LINT):
 	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-tools: $(GOLANGCI_LINT) ## Install the pinned golangci-lint into ./bin
+$(GOVULNCHECK):
+	GOBIN=$(BIN_DIR) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
+
+tools: $(GOLANGCI_LINT) $(GOVULNCHECK) ## Install pinned validation tools into ./bin
 
 # This package is its own consumer: it lints itself with the config it exports.
 $(GENERATED_CONFIG): golangci.yml config.go
 	go run ./cmd/golangci-config-path --out $(GENERATED_CONFIG)
+
+config-check: $(GOLANGCI_LINT) $(GENERATED_CONFIG) ## Verify the generated config against the golangci-lint schema
+	$(GOLANGCI_LINT) config verify --config $(GENERATED_CONFIG)
+
+consumer-check: $(GOLANGCI_LINT) ## Verify generation and lint behavior from a clean consumer module
+	./scripts/check-consumer.sh
 
 lint: lint-check ## Alias for lint-check
 
@@ -37,7 +52,14 @@ coverage: ## Run tests with coverage into coverage/
 	go tool cover -func=coverage/coverage.out
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
 
-check: lint-check format-check test ## Single CI gate: lint + format + test
+security: $(GOVULNCHECK) ## Fail on reachable known vulnerabilities
+	$(GOVULNCHECK) ./...
+
+verify-release: ## Verify VERSION is a Go-compatible semantic release tag
+	@printf '%s\n' "$(VERSION)" | grep -Eq '^v(0|1)\.[0-9]+\.[0-9]+$$' || \
+		{ echo "VERSION must be a v0.x.y or v1.x.y tag" >&2; exit 1; }
+
+check: config-check lint-check format-check coverage consumer-check security ## Single local and CI gate
 
 clean: ## Remove generated artifacts
-	rm -rf bin coverage $(GENERATED_CONFIG)
+	rm -rf bin coverage $(CACHE_DIR) $(GENERATED_CONFIG)

@@ -22,19 +22,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Generate config
-        run: go run ./cmd/golangci-config-path --out .golangci.yml
-      - name: Verify config against the golangci-lint schema
-        run: |
-          make tools
-          ./bin/golangci-lint config verify --config .golangci.yml
-      - name: Lint + format check
-        run: |
-          make tools
-          ./bin/golangci-lint run --config .golangci.yml ./...
-          ./bin/golangci-lint fmt --diff --config .golangci.yml ./...
-      - name: Tests + coverage
-        run: make coverage
+      - name: Check
+        run: make check
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         if: always()

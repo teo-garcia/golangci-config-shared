@@ -46,8 +46,8 @@ and `unparam`.
 
 ## Requirements
 
-- Go 1.25+
-- golangci-lint v2.11+
+- Go 1.25.13+
+- golangci-lint v2.12+
 
 ---
 
@@ -118,12 +118,16 @@ err = golangciconfig.Write(".golangci.yml", overlay)
 | Command | Description |
 | --- | --- |
 | `make tools` | Install the pinned golangci-lint into `./bin` |
+| `make config-check` | Verify the generated config against golangci-lint's schema |
+| `make consumer-check` | Generate and enforce the config from a clean consumer module |
 | `make lint-check` | Run linters (self-hosted: uses its own exported config) |
 | `make format` | Apply gofumpt + gci |
 | `make format-check` | Verify formatting without writing |
 | `make test` | Run tests with `-race` |
 | `make coverage` | Tests + coverage into `coverage/` |
-| `make check` | Single CI gate: lint + format-check + test |
+| `make security` | Scan reachable code with pinned `govulncheck` |
+| `make check` | Single local and CI gate |
+| `make verify-release VERSION=v0.1.0` | Validate a Go module release tag |
 
 ---
 
