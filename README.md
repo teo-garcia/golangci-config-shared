@@ -5,7 +5,7 @@
 **Shared golangci-lint configuration — linting _and_ formatting — for teo-garcia Go templates**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![golangci-lint](https://img.shields.io/badge/golangci--lint-v2-3776AB?logo=go&logoColor=white)](https://golangci-lint.run)
 
 Part of the [@teo-garcia/templates](https://github.com/teo-garcia/templates) ecosystem
@@ -46,8 +46,8 @@ and `unparam`.
 
 ## Requirements
 
-- Go 1.25.13+
-- golangci-lint v2.12+
+- Go 1.26.11+
+- golangci-lint v2.15+
 
 ---
 
