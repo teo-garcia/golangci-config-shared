@@ -91,7 +91,7 @@ empty, so `make lint` works before you have one.
 ### In a Makefile
 
 ```make
-GOLANGCI_LINT_VERSION ?= v2.11.0
+GOLANGCI_LINT_VERSION ?= v2.15.0
 
 .golangci.yml: go.mod golangci.overrides.yml
 	go run github.com/teo-garcia/golangci-config-shared/cmd/golangci-config-path \

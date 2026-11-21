@@ -1,6 +1,6 @@
 .PHONY: help tools config-check consumer-check lint lint-check format format-check test coverage security verify-release check clean
 
-GOLANGCI_LINT_VERSION ?= v2.12.2
+GOLANGCI_LINT_VERSION ?= v2.15.0
 GOVULNCHECK_VERSION ?= v1.7.0
 BIN_DIR := $(CURDIR)/bin
 CACHE_DIR := $(CURDIR)/.cache
